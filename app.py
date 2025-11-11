@@ -625,8 +625,7 @@ elif st.session_state.page == '7_game':
     
     st.button("← Back to Rummy Options", on_click=go_to_rummy)
 
-
-# Brawl page - NEW IMPLEMENTATION
+# Brawl page - UPDATED WITH CELL BORDERS
 elif st.session_state.page == 'brawl':
     st.title("⚔️ Brawl Game")
     
@@ -644,23 +643,28 @@ elif st.session_state.page == 'brawl':
             st.session_state.table_cols = cols_num
         
         st.markdown("---")
-    
         
         num_markers = st.number_input("Number of Markers:", min_value=2, max_value=10, value=2, step=1)
+        
+        # Available letters for markers
+        available_letters = [chr(i) for i in range(65, 91)]  # A-Z
         
         markers = []
         marker_cols = st.columns(min(num_markers, 5))
         
         for i in range(num_markers):
             with marker_cols[i % 5]:
-                marker = st.text_input(
+                # Default selection
+                default_marker = st.session_state.brawl_markers[i] if i < len(st.session_state.brawl_markers) else chr(65+i)
+                default_index = available_letters.index(default_marker) if default_marker in available_letters else i
+                
+                marker = st.selectbox(
                     f"Marker {i+1}:",
-                    value=st.session_state.brawl_markers[i] if i < len(st.session_state.brawl_markers) else chr(65+i),
-                    max_chars=1,
+                    options=available_letters,
+                    index=default_index,
                     key=f"marker_{i}"
-                ).upper()
-                if marker:
-                    markers.append(marker)
+                )
+                markers.append(marker)
         
         st.session_state.brawl_markers = markers
         
@@ -683,26 +687,73 @@ elif st.session_state.page == 'brawl':
         
         st.markdown("---")
         
-        # Display and edit grid
+        # Add container with grid styling
+        st.markdown("""
+        <style>
+        /* Grid container styling */
+        .grid-container {
+            display: grid;
+            gap: 0;
+            border: 2px solid #555;
+            border-radius: 8px;
+            overflow: hidden;
+            padding: 0;
+        }
+        
+        /* Cell borders for selectbox containers */
+        div[data-testid="stSelectbox"] {
+            border-right: 1px solid #555 !important;
+            border-bottom: 1px solid #555 !important;
+            padding: 8px !important;
+            margin: 0 !important;
+        }
+        
+        /* Remove border from last column */
+        .stColumns > div:last-child div[data-testid="stSelectbox"] {
+            border-right: none !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Display and edit grid with borders
         for row_idx in range(st.session_state.table_rows):
+            # Add top border styling for each row
+            if row_idx > 0:
+                st.markdown("<div style='border-top: 2px solid #555; margin: 0; padding: 0;'></div>", unsafe_allow_html=True)
+            
             cols_grid = st.columns(st.session_state.table_cols)
             
             for col_idx in range(st.session_state.table_cols):
                 with cols_grid[col_idx]:
                     current_value = st.session_state.brawl_grid[row_idx][col_idx]
                     
-                    # Cell input
-                    new_value = st.text_input(
+                    # Add left border for cells (except first column)
+                    border_style = ""
+                    if col_idx > 0:
+                        border_style = "border-left: 2px solid #555; padding-left: 8px;"
+                    
+                    st.markdown(f"<div style='{border_style}'></div>", unsafe_allow_html=True)
+                    
+                    # Dropdown options: Empty + all markers
+                    options = [""] + st.session_state.brawl_markers
+                    
+                    # Find current index
+                    if current_value in options:
+                        current_index = options.index(current_value)
+                    else:
+                        current_index = 0
+                    
+                    # Cell dropdown selector
+                    new_value = st.selectbox(
                         f"Cell [{row_idx+1},{col_idx+1}]",
-                        value=current_value,
-                        max_chars=1,
+                        options=options,
+                        index=current_index,
                         key=f"cell_{row_idx}_{col_idx}",
                         label_visibility="collapsed"
-                    ).upper()
+                    )
                     
                     # Update grid
-                    if new_value in st.session_state.brawl_markers or new_value == "":
-                        st.session_state.brawl_grid[row_idx][col_idx] = new_value
+                    st.session_state.brawl_grid[row_idx][col_idx] = new_value
         
         st.markdown("---")
         
